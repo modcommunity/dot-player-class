@@ -178,6 +178,8 @@ func to_dict() -> Dictionary:
 		"speed": move_speed_scale,
 		"loadout": String(loadout_id),
 		"char": String(char_id),
+		"anims": String(animation_set),
+		"voice": String(voice_set),
 		"limit": limit_per_team,
 		"teams": _strings(teams),
 		"abilities": _strings(abilities),
@@ -194,6 +196,8 @@ static func from_dict(d: Dictionary) -> DotPlayerClassDef:
 	c.move_speed_scale = float(d.get("speed", 1.0))
 	c.loadout_id = StringName(str(d.get("loadout", "")))
 	c.char_id = StringName(str(d.get("char", "")))
+	c.animation_set = StringName(str(d.get("anims", "")))
+	c.voice_set = StringName(str(d.get("voice", "")))
 	c.limit_per_team = int(d.get("limit", 0))
 	c.selectable = bool(d.get("selectable", true))
 

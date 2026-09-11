@@ -11,7 +11,7 @@ extends Node
 ## [/codeblock]
 
 const SECTIONS := 7
-const CHECKS := 120
+const CHECKS := 121
 
 var _passed := 0
 var _failed := 0
@@ -145,6 +145,15 @@ func _test_defs() -> void:
 	_check(wire.id == &"medic", "a definition survives a round trip")
 	_check(wire.teams == c.teams, "with its team list")
 	_check(wire.abilities == c.abilities, "and its abilities")
+
+	c.animation_set = &"medic_anims"
+	c.voice_set = &"medic_voice"
+	var ids := DotPlayerClassDef.from_dict(c.to_dict())
+	_check(
+		ids.animation_set == &"medic_anims" and ids.voice_set == &"medic_voice",
+		"and every content id it names — an id declared on the definition and absent "
+		+ "from its wire form is an id a mirroring client never learns"
+	)
 	_check(c.describe().contains("medic"), "and it describes itself")
 
 
