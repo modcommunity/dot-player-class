@@ -10,8 +10,8 @@ extends Node
 ## godot --headless --path . res://examples/class_selftest.tscn
 ## [/codeblock]
 
-const SECTIONS := 7
-const CHECKS := 121
+const SECTIONS := 8
+const CHECKS := 139
 
 var _passed := 0
 var _failed := 0
@@ -39,6 +39,7 @@ func _run() -> void:
 	_test_pending()
 	_test_limits_and_entitlements()
 	_test_teams_and_mirror()
+	_test_applying()
 
 	_line("")
 	_line("%d sections, %d passed, %d failed" % [_section_count, _passed, _failed])
@@ -584,3 +585,117 @@ func _check(condition: bool, what: String) -> void:
 
 func _line(text: String) -> void:
 	print(text)
+
+
+# --- 8 ----------------------------------------------------------------------
+
+## The bridge that writes a class's numbers onto things this addon does not depend on.
+##
+## Stood up against STUBS rather than against `DotHealth` and `DotFpsTunables`, and that
+## is the check rather than a convenience: this project installs dot-core and dot-player
+## and nothing else, so if the bridge ever names one of those classes the suite stops
+## compiling. Testing it against the real ones would need the dependency the bridge
+## exists to avoid.
+class StubHealth extends Object:
+	var max_health: float = 100.0
+	var max_armour: float = 0.0
+	var regen_per_second: float = 0.0
+	var regen_delay_sec: float = 5.0
+	var health: float = 1.0
+	var reset_at: int = -1
+
+	func reset(tick: int) -> void:
+		health = max_health
+		reset_at = tick
+
+
+class StubTunables extends Object:
+	var max_speed: float = 10.0
+	var jump_height: float = 1.0
+	var mass: float = 80.0
+
+
+## A health model with fewer fields than a class has. Must be written, not refused.
+class SmallHealth extends Object:
+	var max_health: float = 1.0
+
+
+func _test_applying() -> void:
+	_section("applying a class to what uses it")
+
+	var def := DotPlayerClassDef.new()
+	def.id = &"heavy"
+	def.max_health = 300.0
+	def.max_armour = 150.0
+	def.regen_per_second = 2.0
+	def.regen_delay_sec = 9.0
+	def.move_speed_scale = 0.8
+	def.jump_scale = 0.5
+	def.mass = 220.0
+	def.knockback_scale = 0.25
+
+	var health := StubHealth.new()
+	_check(DotPlayerClassApply.to_health(def, health) == 4, "four health fields are written")
+	_check(is_equal_approx(health.max_health, 300.0), "the maximum")
+	_check(is_equal_approx(health.max_armour, 150.0), "the armour")
+	_check(is_equal_approx(health.regen_per_second, 2.0), "the regeneration")
+	_check(is_equal_approx(health.regen_delay_sec, 9.0), "and its delay")
+	_check(health.reset_at == -1, "and nothing is reset unless asked")
+
+	# The ordering the bridge's own documentation is about.
+	var full := StubHealth.new()
+	var _n := DotPlayerClassApply.to_health(def, full, true, 640)
+	_check(full.reset_at == 640, "asking for a reset resets at the tick given")
+	_check(
+		is_equal_approx(full.health, 300.0),
+		"and to the NEW maximum — resetting before raising it leaves a 'full' player "
+		+ "on the old class's number, visibly full and quietly short"
+	)
+
+	var tunables := StubTunables.new()
+	_check(DotPlayerClassApply.to_movement(def, tunables) == 3, "three movement fields")
+	_check(is_equal_approx(tunables.max_speed, 8.0), "the speed is scaled, not set")
+	_check(is_equal_approx(tunables.jump_height, 0.5), "and so is the jump")
+	_check(is_equal_approx(tunables.mass, 220.0), "the mass is a value and is set")
+
+	# The compounding this family would otherwise ship: applying a scale to an object
+	# that already carries it.
+	var again := StubTunables.new()
+	var base := StubTunables.new()
+	var _a := DotPlayerClassApply.to_movement(def, again)
+	var _b := DotPlayerClassApply.to_movement(def, again)
+	_check(
+		is_equal_approx(again.max_speed, 6.4),
+		"applying twice to the same object compounds, which is why `base` exists"
+	)
+	var _c := DotPlayerClassApply.to_movement(def, again, base)
+	_check(
+		is_equal_approx(again.max_speed, 8.0),
+		"and a base to read from makes it idempotent"
+	)
+
+	var small := SmallHealth.new()
+	_check(
+		DotPlayerClassApply.to_health(def, small) == 1,
+		"a target with fewer fields takes the ones it has rather than erroring"
+	)
+	_check(is_equal_approx(small.max_health, 300.0), "and gets them")
+
+	_check(
+		DotPlayerClassApply.to_health(null, health) == 0
+		and DotPlayerClassApply.to_movement(def, null) == 0,
+		"a null on either side writes nothing rather than crashing a spawn"
+	)
+	_check(
+		is_equal_approx(DotPlayerClassApply.knockback_scale(def), 0.25),
+		"knockback is returned rather than written, because a hit is not a component"
+	)
+
+	health.free()
+	full.free()
+	tunables.free()
+	again.free()
+	base.free()
+	small.free()
+
+

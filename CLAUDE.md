@@ -55,3 +55,35 @@ The same principle as dot-user-avatar's: the addon validates *shape*, the platfo
 It does not apply anything. It never sets health, never touches a controller's speed, never equips a loadout. The game reads `def_of(key)` on spawn and does all three, because the order those happen in is a game's decision and getting it wrong here would be invisible.
 
 It does not know what a spawn is either: `apply_pending` is called by whatever spawns, which is dot-spawn in most of these games and the match loop in the rest.
+
+## `DotPlayerClassApply`: the seam that was missing, and why it is duck-typed
+
+A class carries `max_health`, `max_armour`, regeneration, a move-speed scale, a jump scale,
+a knockback scale and a mass. Those belong to dot-combat and dot-player-controller, neither
+of which this addon depends on or wants to — a `DotPlayerClassDef` that named `DotHealth`
+would be a class document a dedicated server could not validate without installing a combat
+addon, which is the whole thing this addon promises not to need.
+
+So the bridge writes through [method Object.set] after [method Object.get] has shown the
+field exists, the same way `DotTeamRoster.bind_match` drives dot-match. **No `DotHealth` or
+`DotFpsTunables` identifier appears in the file**, which is not a style point: a script that
+merely mentions a `class_name` the project does not have fails to parse and takes every
+script referencing it down with it.
+
+**Why it exists at all: five games were each about to write the same six lines, and every
+one of them had instead written none.** The manager decided who was what and emitted it,
+and the numbers on the document were read by nobody.
+
+Two things the suite pins, because both are easy to get wrong:
+
+- **The scales multiply, so applying one twice compounds.** 0.8 applied twice is 0.64, and
+  a player who respawned four times would be at 0.41 of the speed with every number in the
+  inspector looking deliberate. `to_movement` takes an untouched `base` to read from, which
+  makes a respawn idempotent.
+- **`reset_to_full` runs after the maximum is written, never before.** `reset` sets health
+  to `max_health`, so resetting first and raising the maximum afterwards leaves a "full"
+  player on the old class's number — visibly full, quietly short.
+
+The suite stands it up against **stubs** rather than against the real classes, and that is
+the check rather than a convenience: this project installs dot-core and dot-player and
+nothing else, so if the bridge ever names one of those classes the suite stops compiling.

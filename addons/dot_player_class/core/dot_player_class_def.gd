@@ -57,10 +57,10 @@ extends Resource
 ## The dot-loadout document this class starts with.
 @export var loadout_id: StringName = &""
 
-## The dot-player-char-model or -sprite id this class looks like.
+## The dot-player-char model or sprite id this class looks like.
 @export var char_id: StringName = &""
 
-## The dot-player-char-animations set to drive.
+## The dot-player-char animation set to drive.
 @export var animation_set: StringName = &""
 
 ## dot-audio ids for a voice, by situation. Open-ended on purpose.
