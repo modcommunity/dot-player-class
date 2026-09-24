@@ -81,12 +81,15 @@ func validate() -> DotResult:
 
 ## Pick freely, land on the next spawn, limits enforced. The usual team shooter.
 static func standard() -> DotPlayerClassRules:
-	return DotPlayerClassRules.new()
+	# Not this class's own name. A script that names itself in an expression, loaded after
+	# its base, cuts Godot 4.7.2's exit teardown short and leaks every script loaded before
+	# it. See docs/gdscript-hazards.md, "A script that names itself".
+	return new()
 
 
 ## Pick freely and land immediately. A sandbox, a lobby, a practice server.
 static func instant() -> DotPlayerClassRules:
-	var r := DotPlayerClassRules.new()
+	var r := new()
 	r.apply_on_respawn = false
 	r.enforce_limits = false
 	return r
@@ -94,7 +97,7 @@ static func instant() -> DotPlayerClassRules:
 
 ## Locked once the round is live. A competitive mode.
 static func competitive() -> DotPlayerClassRules:
-	var r := DotPlayerClassRules.new()
+	var r := new()
 	r.allow_midround_change = false
 	r.enforce_limits = true
 	r.apply_on_respawn = true
@@ -104,7 +107,7 @@ static func competitive() -> DotPlayerClassRules:
 
 ## No choosing at all. A game with one class, or one a mode assigns.
 static func fixed() -> DotPlayerClassRules:
-	var r := DotPlayerClassRules.new()
+	var r := new()
 	r.allow_choice = false
 	r.allow_midround_change = false
 	return r
@@ -112,10 +115,10 @@ static func fixed() -> DotPlayerClassRules:
 
 static func presets() -> Dictionary:
 	return {
-		&"standard": Callable(DotPlayerClassRules, "standard"),
-		&"instant": Callable(DotPlayerClassRules, "instant"),
-		&"competitive": Callable(DotPlayerClassRules, "competitive"),
-		&"fixed": Callable(DotPlayerClassRules, "fixed"),
+		&"standard": standard,
+		&"instant": instant,
+		&"competitive": competitive,
+		&"fixed": fixed,
 	}
 
 
@@ -126,4 +129,6 @@ static func preset(p_id: StringName) -> DotPlayerClassRules:
 		return null
 
 	var fn: Callable = table[p_id]
-	return fn.call() as DotPlayerClassRules
+	# Returned through the declared type rather than cast to this class by name; see the
+	# note on the presets above.
+	return fn.call()
