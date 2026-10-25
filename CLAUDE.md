@@ -6,6 +6,8 @@ Read the family [CLAUDE.md](../../CLAUDE.md) first.
 
 **The distributable is `addons/dot_player_class/`.** It requires [dot-core](../dot-core) and [dot-player](../dot-player) (symlinked into `addons/`, gitignored), and nothing else: dot-combat and dot-player-controller are reached by duck typing.
 
+Also requires **dot-profile** (`DotProfileSet`, `DotProfile`, `DotProfileRuntime`, split from dot-core): link `addons/dot_profile` next to `addons/dot_core`.
+
 ## Read before
 
 | Read | Before |
