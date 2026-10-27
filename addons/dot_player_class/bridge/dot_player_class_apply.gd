@@ -32,6 +32,14 @@ extends RefCounted
 
 const CHANNEL := "player.class.apply"
 
+## Class field to tunables field, written only when the class sets it.
+const MOVEMENT_FIELDS := [
+	["walk_speed_scale", "walk_speed_scale"], ["sprint_speed_scale", "sprint_speed_scale"],
+	["crouch_speed_scale", "crouch_speed_scale"], ["stamina_drain", "stamina_drain"],
+	["stamina_recover", "stamina_recover"], ["stamina_resume_at", "stamina_resume_at"],
+	["stamina_exhaust_delay", "stamina_exhaust_delay"],
+]
+
 
 ## Writes the health half onto anything shaped like a health component.
 ##
@@ -80,7 +88,7 @@ static func to_health(
 ## is what stops a second application compounding: applying a 0.8 scale twice to the
 ## same object is 0.64, and that is the bug this parameter exists to prevent.
 ##
-## Recognised fields: `max_speed`, `jump_height`, `mass`.
+## Recognised fields: `max_speed`, `jump_height`, `mass`, and the walk, sprint, crouch and stamina fields when the class sets them.
 static func to_movement(def: Object, tunables: Object, base: Object = null) -> int:
 	if def == null or tunables == null:
 		return 0
@@ -92,10 +100,25 @@ static func to_movement(def: Object, tunables: Object, base: Object = null) -> i
 	written += _scale(def, "jump_scale", source, tunables, "jump_height")
 	written += _copy(def, tunables, "mass", "mass")
 
+	# A field at -1 (DotPlayerClassDef.INHERIT) is the game's own value and is left alone.
+	for pair: Array in MOVEMENT_FIELDS:
+		var v: Variant = def.get(pair[0])
+		if v != null and float(v) >= 0.0 and _has_property(tunables, pair[1]):
+			tunables.set(pair[1], float(v))
+			written += 1
+
 	if written == 0:
 		DotLog.debug(CHANNEL, "no movement fields matched", {"class": _id_of(def)})
 
 	return written
+
+
+## The class's carry capacity, or [param fallback] when it keeps the game's.
+static func carry_limit(def: Object, fallback: float) -> float:
+	if def == null:
+		return fallback
+	var v: Variant = def.get("carry_limit")
+	return float(v) if v != null and float(v) >= 0.0 else fallback
 
 
 ## The knockback multiplier, for a game that has one. Returns 1.0 when the class has none.

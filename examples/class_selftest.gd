@@ -10,8 +10,8 @@ extends Node
 ## godot --headless --path . res://examples/class_selftest.tscn
 ## [/codeblock]
 
-const SECTIONS := 8
-const CHECKS := 139
+const SECTIONS := 9
+const CHECKS := 153
 
 var _passed := 0
 var _failed := 0
@@ -40,6 +40,7 @@ func _run() -> void:
 	_test_limits_and_entitlements()
 	_test_teams_and_mirror()
 	_test_applying()
+	_test_profiles()
 
 	_line("")
 	_line("%d sections, %d passed, %d failed" % [_section_count, _passed, _failed])
@@ -613,6 +614,9 @@ class StubTunables extends Object:
 	var max_speed: float = 10.0
 	var jump_height: float = 1.0
 	var mass: float = 80.0
+	var walk_speed_scale: float = 0.5
+	var sprint_speed_scale: float = 1.2
+	var stamina_drain: float = 0.2
 
 
 ## A health model with fewer fields than a class has. Must be written, not refused.
@@ -699,3 +703,65 @@ func _test_applying() -> void:
 	small.free()
 
 
+
+
+# --- 9 ----------------------------------------------------------------------
+
+const PROFILE_BASE := "user://class_selftest_cfg"
+
+
+func _put(rel: String, text: String) -> void:
+	var path := PROFILE_BASE.path_join(rel)
+	DirAccess.make_dir_recursive_absolute(path.get_base_dir())
+	var f := FileAccess.open(path, FileAccess.WRITE)
+	f.store_string(text)
+	f.close()
+
+
+func _test_profiles() -> void:
+	_section("classes as dot-profile data")
+
+	var _clean := DotPaths.remove_tree(PROFILE_BASE)
+	var set := DotPlayerClassProfiles.make_set("mygame", PackedStringArray([PROFILE_BASE]))
+	_put("game/mygame/class/survivor.yml", "health: 120\nspeed: 1.0\n")
+	var res := DotPlayerClassProfiles.load_def(set, "survivor")
+	_check(res.ok, "a class loads from a profile")
+	var def: DotPlayerClassDef = res.value
+	_check(def.id == &"survivor" and is_equal_approx(def.max_health, 120.0), "the file's health is the class's")
+	_check(is_equal_approx(def.sprint_speed_scale, DotPlayerClassDef.INHERIT), "an unset number keeps the game's")
+
+	var t := StubTunables.new()
+	var _n := DotPlayerClassApply.to_movement(def, t)
+	_check(is_equal_approx(t.sprint_speed_scale, 1.2) and is_equal_approx(t.stamina_drain, 0.2), "unset fields leave the tunables alone")
+	_check(is_equal_approx(DotPlayerClassApply.carry_limit(def, 14.0), 14.0), "carry falls back to the game's")
+
+	_put("server/game/mygame/class/survivor.yml", "speed: 1.5\nsprint_speed_scale: 1.4\nstamina_drain: 0.5\ncarry_limit: 30\n")
+	set = DotPlayerClassProfiles.make_set("mygame", PackedStringArray([PROFILE_BASE]))
+	def = DotPlayerClassProfiles.load_def(set, "survivor").value
+	var base := StubTunables.new()
+	t = StubTunables.new()
+	var _m := DotPlayerClassApply.to_movement(def, t, base)
+	_check(is_equal_approx(t.max_speed, 15.0), "a server profile scales the run speed")
+	_check(is_equal_approx(t.sprint_speed_scale, 1.4) and is_equal_approx(t.stamina_drain, 0.5), "and sets the sprint and stamina numbers")
+	_check(is_equal_approx(DotPlayerClassApply.carry_limit(def, 14.0), 30.0), "and the carry limit")
+	_check(is_equal_approx(def.max_health, 120.0), "keys the server file leaves out come from the lower tier")
+
+	_put("server/game/mygame/class/bad.yml", "speed: 99\n")
+	_put("server/game/mygame/class/typo.yml", "sprnt: 2\n")
+	_check(not DotPlayerClassProfiles.load_def(set, "bad").ok, "an out-of-range value is refused")
+	_check(not DotPlayerClassProfiles.load_def(set, "typo").ok, "an unknown key is refused")
+
+	var bad := DotPlayerClassDef.new()
+	bad.id = &"x"
+	bad.carry_limit = -5.0
+	_check(not bad.validate().ok, "a negative that is not the inherit marker fails validation")
+
+	var errors := PackedStringArray()
+	var cat := DotPlayerClassProfiles.to_catalogue(set, errors)
+	_check(cat.has_class(&"survivor") and errors.size() == 2, "the catalogue holds the good class and reports the two bad ones")
+	var round_trip := DotPlayerClassDef.from_dict(def.to_dict())
+	_check(is_equal_approx(round_trip.sprint_speed_scale, 1.4) and is_equal_approx(round_trip.carry_limit, 30.0), "to_dict and from_dict carry the new fields")
+
+	t.free()
+	base.free()
+	var _gone := DotPaths.remove_tree(PROFILE_BASE)

@@ -54,3 +54,8 @@ Two things the suite pins, because both are easy to get wrong:
 - **`reset_to_full` runs after the maximum is written, never before.** `reset` sets health to `max_health`, so resetting first and raising the maximum afterwards leaves a "full" player on the old class's number: visibly full, quietly short.
 
 The suite stands it up against **stubs** rather than against the real classes, and that is the check rather than a convenience: this project installs dot-core and dot-player and nothing else, so if the bridge ever names one of those classes the suite stops compiling.
+
+## Classes as dot-profile data
+
+`DotPlayerClassProfiles` is the dot-profile schema for kind `class`, so an operator edits a yml (`cfg/server/game/<game>/class/<id>.yml`) instead of code, with the usual layers (defaults < addon < game < server < environment < command line, and the runtime layer). Walk, sprint and crouch scales, the four stamina numbers and `carry_limit` default to `DotPlayerClassDef.INHERIT` (-1): the class does not set them and the game's own tunable stands, which keeps one source per number (Zombie Zone's `ZzConfig` stays the default, the class only overrides). `move_speed_scale` (`speed` in the yml) multiplies the run speed. `to_movement` writes only the fields the class sets; `DotPlayerClassApply.carry_limit(def, fallback)` answers the capacity. Out-of-range values and unknown keys fail the load (the schema's), and `validate()` refuses a negative that is not -1. A change applies where the game re-reads the profile, normally the next spawn.
+

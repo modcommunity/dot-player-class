@@ -14,6 +14,15 @@ extends Resource
 ## Resolution from an id to actual content happens on a client, through a catalogue,
 ## through dot-cloud.
 
+## A number field at this value is not set by the class: the game's own value stands.
+const INHERIT := -1.0
+
+## The fields that may be [constant INHERIT].
+const INHERITING: Array[String] = [
+	"walk_speed_scale", "sprint_speed_scale", "crouch_speed_scale", "stamina_drain",
+	"stamina_recover", "stamina_resume_at", "stamina_exhaust_delay", "carry_limit",
+]
+
 ## The name everything else uses. [code]&"medic"[/code], [code]&"scout"[/code].
 @export var id: StringName = &""
 
@@ -42,6 +51,25 @@ extends Resource
 
 ## Multiplier on ground speed. Read by a controller; this addon never moves anything.
 @export_range(0.05, 10.0, 0.01) var move_speed_scale: float = 1.0
+
+## Walk (slow key) multiplier on the run speed; [constant INHERIT] keeps the game's.
+@export_range(-1.0, 1.0, 0.01) var walk_speed_scale: float = INHERIT
+
+## Sprint multiplier on the run speed; [constant INHERIT] keeps the game's.
+@export_range(-1.0, 3.0, 0.01) var sprint_speed_scale: float = INHERIT
+
+## Crouch multiplier on the run speed; [constant INHERIT] keeps the game's.
+@export_range(-1.0, 1.0, 0.01) var crouch_speed_scale: float = INHERIT
+
+## Stamina drain and recovery per second (1.0 is a full bar), the fraction it resumes sprinting at and the
+## seconds of refill delay once spent; each [constant INHERIT] keeps the game's.
+@export_range(-1.0, 10.0, 0.01) var stamina_drain: float = INHERIT
+@export_range(-1.0, 10.0, 0.01) var stamina_recover: float = INHERIT
+@export_range(-1.0, 1.0, 0.01) var stamina_resume_at: float = INHERIT
+@export_range(-1.0, 10.0, 0.05) var stamina_exhaust_delay: float = INHERIT
+
+## Carry capacity in the game's weight unit; [constant INHERIT] keeps the game's.
+@export_range(-1.0, 1000.0, 0.5) var carry_limit: float = INHERIT
 
 ## Multiplier on jump height.
 @export_range(0.0, 10.0, 0.01) var jump_scale: float = 1.0
@@ -115,6 +143,13 @@ func validate() -> DotResult:
 	if id == &"":
 		return DotResult.fail(DotError.CODE_INVALID, "A class with no id cannot be asked for.")
 
+	for f: String in INHERITING:
+		var v: float = get(f)
+		if not is_finite(v) or (v < 0.0 and v != INHERIT):
+			return DotResult.fail(
+				DotError.CODE_INVALID, "'%s' has %s %s; use a number from 0 up, or -1 to keep the game's." % [String(id), f, str(v)]
+			)
+
 	if max_health <= 0.0:
 		return DotResult.fail(
 			DotError.CODE_INVALID,
@@ -176,6 +211,14 @@ func to_dict() -> Dictionary:
 		"health": max_health,
 		"armour": max_armour,
 		"speed": move_speed_scale,
+		"walk": walk_speed_scale,
+		"sprint": sprint_speed_scale,
+		"crouch": crouch_speed_scale,
+		"stamina_drain": stamina_drain,
+		"stamina_recover": stamina_recover,
+		"stamina_resume_at": stamina_resume_at,
+		"stamina_exhaust_delay": stamina_exhaust_delay,
+		"carry": carry_limit,
 		"loadout": String(loadout_id),
 		"char": String(char_id),
 		"anims": String(animation_set),
@@ -194,6 +237,14 @@ static func from_dict(d: Dictionary) -> DotPlayerClassDef:
 	c.max_health = float(d.get("health", 100.0))
 	c.max_armour = float(d.get("armour", 0.0))
 	c.move_speed_scale = float(d.get("speed", 1.0))
+	c.walk_speed_scale = float(d.get("walk", INHERIT))
+	c.sprint_speed_scale = float(d.get("sprint", INHERIT))
+	c.crouch_speed_scale = float(d.get("crouch", INHERIT))
+	c.stamina_drain = float(d.get("stamina_drain", INHERIT))
+	c.stamina_recover = float(d.get("stamina_recover", INHERIT))
+	c.stamina_resume_at = float(d.get("stamina_resume_at", INHERIT))
+	c.stamina_exhaust_delay = float(d.get("stamina_exhaust_delay", INHERIT))
+	c.carry_limit = float(d.get("carry", INHERIT))
 	c.loadout_id = StringName(str(d.get("loadout", "")))
 	c.char_id = StringName(str(d.get("char", "")))
 	c.animation_set = StringName(str(d.get("anims", "")))
