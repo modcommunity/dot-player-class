@@ -134,6 +134,20 @@ static func knockback_scale(def: Object) -> float:
 	return float(value) if value != null else 1.0
 
 
+## Writes the class's damage immunities for [param entity] onto a `DotDamageImmunity`
+## (duck-typed: anything with `set_immune(entity, kinds)`). A class with none clears the
+## entity's entry, so a respawn as another class does not keep the old ones. Returns the
+## number of kinds written.
+static func to_immunity(def: Object, immunity: Object, entity: int) -> int:
+	if def == null or immunity == null or not immunity.has_method("set_immune"):
+		return 0
+
+	var kinds: Variant = def.get("immune_to")
+	var list: Array = kinds if kinds is Array else []
+	immunity.call("set_immune", entity, list)
+	return list.size()
+
+
 # --- The duck typing --------------------------------------------------------
 
 static func _copy(from: Object, to: Object, from_field: String, to_field: String) -> int:

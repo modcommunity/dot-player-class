@@ -100,6 +100,9 @@ const INHERITING: Array[String] = [
 ## one, and an ability that is a [Script] here is an ability a server has to compile.
 @export var abilities: Array[StringName] = []
 
+## Damage type ids this class ignores (`fall`, `fire`, `explosion`, or `all`). Empty means none.
+@export var immune_to: Array[StringName] = []
+
 @export_group("Availability")
 
 ## Which teams may take it. Empty means all of them.
@@ -226,6 +229,7 @@ func to_dict() -> Dictionary:
 		"limit": limit_per_team,
 		"teams": _strings(teams),
 		"abilities": _strings(abilities),
+		"immune": _strings(immune_to),
 		"selectable": selectable,
 	}
 
@@ -257,6 +261,9 @@ static func from_dict(d: Dictionary) -> DotPlayerClassDef:
 
 	for a: Variant in d.get("abilities", []):
 		c.abilities.append(StringName(str(a)))
+
+	for k: Variant in d.get("immune", []):
+		c.immune_to.append(StringName(str(k)))
 
 	return c
 

@@ -610,6 +610,16 @@ class StubHealth extends Object:
 		reset_at = tick
 
 
+class StubImmunity extends Object:
+	var kinds: Dictionary = {}
+
+	func set_immune(entity: int, list: Array) -> void:
+		kinds[entity] = list
+
+	func is_immune(entity: int, kind: StringName) -> bool:
+		return kinds.get(entity, []).has(kind)
+
+
 class StubTunables extends Object:
 	var max_speed: float = 10.0
 	var jump_height: float = 1.0
@@ -745,6 +755,16 @@ func _test_profiles() -> void:
 	_check(is_equal_approx(t.sprint_speed_scale, 1.4) and is_equal_approx(t.stamina_drain, 0.5), "and sets the sprint and stamina numbers")
 	_check(is_equal_approx(DotPlayerClassApply.carry_limit(def, 14.0), 30.0), "and the carry limit")
 	_check(is_equal_approx(def.max_health, 120.0), "keys the server file leaves out come from the lower tier")
+
+	_check(def.immune_to.is_empty(), "no immunity by default")
+	_put("server/game/mygame/class/jetpack.yml", "immune: [fall, fire]\n")
+	var jet: DotPlayerClassDef = DotPlayerClassProfiles.load_def(set, "jetpack").value
+	_check(jet.immune_to == [&"fall", &"fire"], "a profile lists the damage kinds a class ignores")
+	_check(DotPlayerClassDef.from_dict(jet.to_dict()).immune_to == jet.immune_to, "and the list survives the wire form")
+	var imm := StubImmunity.new()
+	_check(DotPlayerClassApply.to_immunity(jet, imm, 9) == 2 and imm.is_immune(9, &"fall"), "the bridge writes it for the entity")
+	var _w := DotPlayerClassApply.to_immunity(def, imm, 9)
+	_check(not imm.is_immune(9, &"fall"), "a class with none clears the entry on respawn")
 
 	_put("server/game/mygame/class/bad.yml", "speed: 99\n")
 	_put("server/game/mygame/class/typo.yml", "sprnt: 2\n")

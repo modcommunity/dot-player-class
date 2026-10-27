@@ -38,6 +38,7 @@ static func schema() -> Array:
 		f.call("anims", "string", ""),
 		f.call("voice", "string", ""),
 		f.call("abilities", "list", []),
+		f.call("immune", "list", []),
 		f.call("teams", "list", []),
 		f.call("limit", "int", 0, {"min": 0, "max": 1024}),
 		f.call("entitlement", "string", ""),
@@ -81,6 +82,8 @@ static func def_from_profile(profile: DotProfile) -> DotPlayerClassDef:
 	c.voice_set = StringName(str(v["voice"]))
 	for a: Variant in v["abilities"]:
 		c.abilities.append(StringName(str(a)))
+	for k: Variant in v["immune"]:
+		c.immune_to.append(StringName(str(k)))
 	for t: Variant in v["teams"]:
 		c.teams.append(StringName(str(t)))
 	c.limit_per_team = int(v["limit"])

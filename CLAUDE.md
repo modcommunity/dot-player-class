@@ -23,7 +23,7 @@ Also requires **dot-profile** (`DotProfileSet`, `DotProfile`, `DotProfileRuntime
 | `core/dot_player_class_rules.gd` | `DotPlayerClassRules`: when a choice may be made and when it lands |
 | `runtime/dot_player_class_manager.gd` | `DotPlayerClassManager`: current, pending, limits, entitlements, mirror; `request`, `force`, `apply_pending`, `def_of`, `options_for` |
 | `core/dot_player_class_profiles.gd` | `DotPlayerClassProfiles`: the dot-profile schema for kind `class`; `make_set`, `load_def`, `to_catalogue` ([design](docs/design.md#classes-as-dot-profile-data)) |
-| `bridge/dot_player_class_apply.gd` | `DotPlayerClassApply`: `to_health`, `to_movement`, `knockback_scale`, all duck-typed |
+| `bridge/dot_player_class_apply.gd` | `DotPlayerClassApply`: `to_health`, `to_movement`, `knockback_scale`, `to_immunity` (the `immune` list onto dot-combat's `DotDamageImmunity`), all duck-typed |
 | `examples/class_selftest.tscn` | the suite |
 
 Paths except `examples/` are in `addons/dot_player_class/`.

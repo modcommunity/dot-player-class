@@ -63,3 +63,7 @@ The suite stands it up against **stubs** rather than against the real classes, a
 ### Editing a class (server owner)
 
 Copy only the keys you change into `cfg/server/game/<game>/class/<id>.yml`; the keys are `DotPlayerClassProfiles.schema()` and the full list with ranges is in dot-profile's `docs/profiles.md`. Ranges are enforced on load (unsafe values and unknown keys refuse the file, the shipped class stays), `-1` keeps the game's number, and a layer above the server file (environment, command line) wins. Checked by `examples/class_selftest`.
+
+## Damage immunity
+
+A class profile may list `immune: [fall, fire]` (damage type ids, or `all`); `DotPlayerClassDef.immune_to` carries it and `DotPlayerClassApply.to_immunity(def, immunity, entity)` writes it onto dot-combat's `DotDamageImmunity` at spawn, which the resolver consults first. Empty by default, so no game changes. It is an ordinary schema field, so the workbench class editor shows it as a list. A class with none clears the entity's entry, so a respawn does not keep the old class's immunities.
