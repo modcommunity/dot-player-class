@@ -59,3 +59,7 @@ The suite stands it up against **stubs** rather than against the real classes, a
 
 `DotPlayerClassProfiles` is the dot-profile schema for kind `class`, so an operator edits a yml (`cfg/server/game/<game>/class/<id>.yml`) instead of code, with the usual layers (defaults < addon < game < server < environment < command line, and the runtime layer). Walk, sprint and crouch scales, the four stamina numbers and `carry_limit` default to `DotPlayerClassDef.INHERIT` (-1): the class does not set them and the game's own tunable stands, which keeps one source per number (Zombie Zone's `ZzConfig` stays the default, the class only overrides). `move_speed_scale` (`speed` in the yml) multiplies the run speed. `to_movement` writes only the fields the class sets; `DotPlayerClassApply.carry_limit(def, fallback)` answers the capacity. Out-of-range values and unknown keys fail the load (the schema's), and `validate()` refuses a negative that is not -1. A change applies where the game re-reads the profile, normally the next spawn.
 
+
+### Editing a class (server owner)
+
+Copy only the keys you change into `cfg/server/game/<game>/class/<id>.yml`; the keys are `DotPlayerClassProfiles.schema()` and the full list with ranges is in dot-profile's `docs/profiles.md`. Ranges are enforced on load (unsafe values and unknown keys refuse the file, the shipped class stays), `-1` keeps the game's number, and a layer above the server file (environment, command line) wins. Checked by `examples/class_selftest`.
