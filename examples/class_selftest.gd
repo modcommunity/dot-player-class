@@ -11,7 +11,7 @@ extends Node
 ## [/codeblock]
 
 const SECTIONS := 9
-const CHECKS := 158
+const CHECKS := 162
 
 var _passed := 0
 var _failed := 0
@@ -781,6 +781,15 @@ func _test_profiles() -> void:
 	_check(cat.has_class(&"survivor") and errors.size() == 2, "the catalogue holds the good class and reports the two bad ones")
 	var round_trip := DotPlayerClassDef.from_dict(def.to_dict())
 	_check(is_equal_approx(round_trip.sprint_speed_scale, 1.4) and is_equal_approx(round_trip.carry_limit, 30.0), "to_dict and from_dict carry the new fields")
+
+	_check(is_equal_approx(def.drop_throw_force, DotPlayerClassDef.INHERIT) and is_equal_approx(def.drop_lifetime, DotPlayerClassDef.INHERIT), "drop fields default to inherit")
+	_put("server/game/mygame/class/dropper.yml", "drop_throw_force: 12\ndrop_lifetime: 0\ndrop_allowed: 0\n")
+	var dropper: DotPlayerClassDef = DotPlayerClassProfiles.load_def(set, "dropper").value
+	_check(is_equal_approx(dropper.drop_throw_force, 12.0) and is_equal_approx(dropper.drop_lifetime, 0.0) and is_equal_approx(dropper.drop_allowed, 0.0), "a profile sets the drop numbers")
+	var dropper_back := DotPlayerClassDef.from_dict(dropper.to_dict())
+	_check(is_equal_approx(dropper_back.drop_throw_force, 12.0) and is_equal_approx(dropper_back.drop_pickup_radius, DotPlayerClassDef.INHERIT), "and they survive the wire form")
+	_put("server/game/mygame/class/dropbad.yml", "drop_throw_force: 99\n")
+	_check(not DotPlayerClassProfiles.load_def(set, "dropbad").ok, "an out-of-range drop force is refused")
 
 	t.free()
 	base.free()

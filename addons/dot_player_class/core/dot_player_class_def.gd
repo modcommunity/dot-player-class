@@ -21,6 +21,7 @@ const INHERIT := -1.0
 const INHERITING: Array[String] = [
 	"walk_speed_scale", "sprint_speed_scale", "crouch_speed_scale", "stamina_drain",
 	"stamina_recover", "stamina_resume_at", "stamina_exhaust_delay", "carry_limit",
+	"drop_allowed", "drop_on_death", "drop_lifetime", "drop_throw_force", "drop_throw_up", "drop_pickup_radius",
 ]
 
 ## The name everything else uses. [code]&"medic"[/code], [code]&"scout"[/code].
@@ -70,6 +71,16 @@ const INHERITING: Array[String] = [
 
 ## Carry capacity in the game's weight unit; [constant INHERIT] keeps the game's.
 @export_range(-1.0, 1000.0, 0.5) var carry_limit: float = INHERIT
+
+## Dropped weapons (dot-weapon's DotWeaponDropRules.resolve reads these by name); each
+## [constant INHERIT] keeps the server's rule. The two switches are 0 (off) or 1 (on); the lifetime
+## is seconds with 0 meaning it never vanishes.
+@export_range(-1.0, 1.0, 1.0) var drop_allowed: float = INHERIT
+@export_range(-1.0, 1.0, 1.0) var drop_on_death: float = INHERIT
+@export_range(-1.0, 3600.0, 0.5) var drop_lifetime: float = INHERIT
+@export_range(-1.0, 40.0, 0.1) var drop_throw_force: float = INHERIT
+@export_range(-1.0, 20.0, 0.1) var drop_throw_up: float = INHERIT
+@export_range(-1.0, 6.0, 0.1) var drop_pickup_radius: float = INHERIT
 
 ## Multiplier on jump height.
 @export_range(0.0, 10.0, 0.01) var jump_scale: float = 1.0
@@ -222,6 +233,12 @@ func to_dict() -> Dictionary:
 		"stamina_resume_at": stamina_resume_at,
 		"stamina_exhaust_delay": stamina_exhaust_delay,
 		"carry": carry_limit,
+		"drop_allowed": drop_allowed,
+		"drop_on_death": drop_on_death,
+		"drop_lifetime": drop_lifetime,
+		"drop_throw_force": drop_throw_force,
+		"drop_throw_up": drop_throw_up,
+		"drop_pickup_radius": drop_pickup_radius,
 		"loadout": String(loadout_id),
 		"char": String(char_id),
 		"anims": String(animation_set),
@@ -249,6 +266,8 @@ static func from_dict(d: Dictionary) -> DotPlayerClassDef:
 	c.stamina_resume_at = float(d.get("stamina_resume_at", INHERIT))
 	c.stamina_exhaust_delay = float(d.get("stamina_exhaust_delay", INHERIT))
 	c.carry_limit = float(d.get("carry", INHERIT))
+	for f: String in ["drop_allowed", "drop_on_death", "drop_lifetime", "drop_throw_force", "drop_throw_up", "drop_pickup_radius"]:
+		c.set(f, float(d.get(f, INHERIT)))
 	c.loadout_id = StringName(str(d.get("loadout", "")))
 	c.char_id = StringName(str(d.get("char", "")))
 	c.animation_set = StringName(str(d.get("anims", "")))
