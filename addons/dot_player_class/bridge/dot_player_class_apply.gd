@@ -1,29 +1,10 @@
 class_name DotPlayerClassApply
 extends RefCounted
 
-## Writes a class's numbers onto the things that actually use them.
+## Writes a class's numbers onto health and movement tunables, duck-typed.
 ##
-## [b]The seam that was missing, and the reason it is a bridge rather than a method on
-## [DotPlayerClassDef].[/b] A class carries `max_health`, `max_armour`, regeneration, a
-## move-speed scale, a jump scale, a knockback scale and a mass — and those belong to
-## dot-combat and dot-player-controller, neither of which this addon depends on or wants
-## to. A `DotPlayerClassDef` that named `DotHealth` would be a class document a dedicated
-## server could not validate without installing a combat addon, which is the whole thing
-## this addon promises not to need.
-##
-## So it is duck-typed, exactly the way [code]DotTeamRoster.bind_match[/code] drives
-## dot-match and [code]DotWeaponPlayer[/code] reaches dot-player: fields are written
-## through [method Object.set] after [method Object.get] has shown they exist. No
-## [code]DotHealth[/code] or [code]DotFpsTunables[/code] identifier appears anywhere in
-## this file, so a project with neither installed still compiles it — which is not a
-## style point: a script that merely MENTIONS a `class_name` the project does not have
-## fails to parse and takes every script referencing it down with it.
-##
-## [b]Why this exists at all: five games were each about to write the same six lines, and
-## every one of them had instead written none.[/b] The class manager decided who was what
-## and emitted it, and the numbers on the document reached nothing — a value produced
-## correctly and consumed by nothing, which is this family's most repeated shape.
-##
+## Fields are set through [method Object.set] after checking they exist, so no `DotHealth`
+## identifier appears here: naming a `class_name` the project lacks fails the parse.
 ## [codeblock]
 ## var def := classes.def_of(key)
 ## DotPlayerClassApply.to_health(def, player.health)
@@ -42,18 +23,8 @@ const MOVEMENT_FIELDS := [
 
 
 ## Writes the health half onto anything shaped like a health component.
-##
-## Recognised fields: `max_health`, `max_armour`, `regen_per_second`, `regen_delay_sec`.
-## Anything the target does not have is skipped rather than being an error — a game with
-## a simpler health model is not a game doing something wrong.
-##
-## [param reset_to_full] calls `reset(tick)` afterwards when the target has one, which is
-## what makes a class change land as a full bar rather than as a bar that is suddenly
-## over its own maximum. Off by default, because a mid-life class change that healed you
-## is an exploit in every game that has one.
-##
-## Returns the number of fields written, so a caller can log "applied nothing" rather
-## than believing it worked.
+## [param reset_to_full] calls `reset(tick)` afterwards; off by default, since a mid-life
+## class change that healed would be an exploit. Returns the number of fields written.
 static func to_health(
 	def: Object, health: Object, reset_to_full: bool = false, tick: int = 0
 ) -> int:
@@ -67,9 +38,7 @@ static func to_health(
 	written += _copy(def, health, "regen_per_second", "regen_per_second")
 	written += _copy(def, health, "regen_delay_sec", "regen_delay_sec")
 
-	# [b]After the maximum, never before.[/b] `reset` sets health to `max_health`, so
-	# resetting first and then raising the maximum leaves a "full" player on the old
-	# class's number — visibly full, quietly missing the difference.
+	# After the maximum: `reset` fills to `max_health`, so resetting first leaves the old number.
 	if reset_to_full and health.has_method("reset"):
 		health.call("reset", tick)
 
@@ -80,15 +49,8 @@ static func to_health(
 
 
 ## Writes the movement half onto anything shaped like a tunables object.
-##
-## [b]Scales, not values, and that is what makes it composable.[/b] A class says "80% of
-## the speed", not "5.6 m/s" — so a server that changes `sv_maxspeed`, a style that
-## halves air acceleration and a class that is slow all still multiply rather than one
-## of them silently winning. The base is read from [param base] when one is given, which
-## is what stops a second application compounding: applying a 0.8 scale twice to the
-## same object is 0.64, and that is the bug this parameter exists to prevent.
-##
-## Recognised fields: `max_speed`, `jump_height`, `mass`, and the walk, sprint, crouch and stamina fields when the class sets them.
+## Scales multiply the value read from [param base] (default the target itself); a base
+## stops a second application compounding (0.8 twice is 0.64).
 static func to_movement(def: Object, tunables: Object, base: Object = null) -> int:
 	if def == null or tunables == null:
 		return 0
@@ -121,11 +83,7 @@ static func carry_limit(def: Object, fallback: float) -> float:
 	return float(v) if v != null and float(v) >= 0.0 else fallback
 
 
-## The knockback multiplier, for a game that has one. Returns 1.0 when the class has none.
-##
-## Not written anywhere, because knockback is applied at the moment of a hit rather than
-## held on a component — so there is nothing to write it onto and a caller multiplies by
-## it instead.
+## The knockback multiplier, 1.0 when the class has none. Multiplied at hit time, not written.
 static func knockback_scale(def: Object) -> float:
 	if def == null:
 		return 1.0
@@ -134,10 +92,8 @@ static func knockback_scale(def: Object) -> float:
 	return float(value) if value != null else 1.0
 
 
-## Writes the class's damage immunities for [param entity] onto a `DotDamageImmunity`
-## (duck-typed: anything with `set_immune(entity, kinds)`). A class with none clears the
-## entity's entry, so a respawn as another class does not keep the old ones. Returns the
-## number of kinds written.
+## Writes the class's damage immunities for [param entity] onto anything with
+## `set_immune(entity, kinds)`; none clears the entry. Returns the number written.
 static func to_immunity(def: Object, immunity: Object, entity: int) -> int:
 	if def == null or immunity == null or not immunity.has_method("set_immune"):
 		return 0
@@ -148,18 +104,13 @@ static func to_immunity(def: Object, immunity: Object, entity: int) -> int:
 	return list.size()
 
 
-# --- The duck typing --------------------------------------------------------
-
 static func _copy(from: Object, to: Object, from_field: String, to_field: String) -> int:
 	var value: Variant = from.get(from_field)
 
 	if value == null:
 		return 0
 
-	# `get` on an absent property answers null, which is also a legitimate value for a
-	# property that exists — so the target is checked with its own property list rather
-	# than by comparing against null, which would write a field that is not there and
-	# lose it silently.
+	# `get` answers null for an absent property too, so check the property list instead.
 	if not _has_property(to, to_field):
 		return 0
 

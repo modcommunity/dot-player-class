@@ -1,7 +1,6 @@
 # comments
 # Baselines only shrink: scripts/<gate> --update lowers or drops entries and refuses to add.
-addons/dot_player_class/bridge/dot_player_class_apply.gd::banner	1
-addons/dot_player_class/bridge/dot_player_class_apply.gd::long_block	5
+addons/dot_player_class/bridge/dot_player_class_apply.gd::long_block	1
 addons/dot_player_class/core/dot_player_class_catalogue.gd::banner	1
 addons/dot_player_class/core/dot_player_class_catalogue.gd::long_block	3
 addons/dot_player_class/core/dot_player_class_def.gd::long_block	5
@@ -9,5 +8,5 @@ addons/dot_player_class/core/dot_player_class_rules.gd::banner	1
 addons/dot_player_class/core/dot_player_class_rules.gd::long_block	5
 addons/dot_player_class/runtime/dot_player_class_manager.gd::banner	5
 addons/dot_player_class/runtime/dot_player_class_manager.gd::long_block	7
-examples/class_selftest.gd::banner	4
+examples/class_selftest.gd::banner	3
 examples/class_selftest.gd::long_block	3

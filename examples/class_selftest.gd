@@ -588,8 +588,6 @@ func _line(text: String) -> void:
 	print(text)
 
 
-# --- 8 ----------------------------------------------------------------------
-
 ## The bridge that writes a class's numbers onto things this addon does not depend on.
 ##
 ## Stood up against STUBS rather than against `DotHealth` and `DotFpsTunables`, and that
@@ -655,25 +653,30 @@ func _test_applying() -> void:
 	_check(is_equal_approx(health.regen_per_second, 2.0), "the regeneration")
 	_check(is_equal_approx(health.regen_delay_sec, 9.0), "and its delay")
 	_check(health.reset_at == -1, "and nothing is reset unless asked")
+	_test_applying_reset(def)
+	_test_applying_movement(def)
+	_test_applying_edges(def, health)
+	health.free()
 
-	# The ordering the bridge's own documentation is about.
+
+func _test_applying_reset(def: DotPlayerClassDef) -> void:
 	var full := StubHealth.new()
 	var _n := DotPlayerClassApply.to_health(def, full, true, 640)
 	_check(full.reset_at == 640, "asking for a reset resets at the tick given")
 	_check(
 		is_equal_approx(full.health, 300.0),
-		"and to the NEW maximum — resetting before raising it leaves a 'full' player "
-		+ "on the old class's number, visibly full and quietly short"
+		"and to the NEW maximum, not the old class's number"
 	)
+	full.free()
 
+
+func _test_applying_movement(def: DotPlayerClassDef) -> void:
 	var tunables := StubTunables.new()
 	_check(DotPlayerClassApply.to_movement(def, tunables) == 3, "three movement fields")
 	_check(is_equal_approx(tunables.max_speed, 8.0), "the speed is scaled, not set")
 	_check(is_equal_approx(tunables.jump_height, 0.5), "and so is the jump")
 	_check(is_equal_approx(tunables.mass, 220.0), "the mass is a value and is set")
 
-	# The compounding this family would otherwise ship: applying a scale to an object
-	# that already carries it.
 	var again := StubTunables.new()
 	var base := StubTunables.new()
 	var _a := DotPlayerClassApply.to_movement(def, again)
@@ -688,6 +691,12 @@ func _test_applying() -> void:
 		"and a base to read from makes it idempotent"
 	)
 
+	tunables.free()
+	again.free()
+	base.free()
+
+
+func _test_applying_edges(def: DotPlayerClassDef, health: StubHealth) -> void:
 	var small := SmallHealth.new()
 	_check(
 		DotPlayerClassApply.to_health(def, small) == 1,
@@ -705,17 +714,8 @@ func _test_applying() -> void:
 		"knockback is returned rather than written, because a hit is not a component"
 	)
 
-	health.free()
-	full.free()
-	tunables.free()
-	again.free()
-	base.free()
 	small.free()
 
-
-
-
-# --- 9 ----------------------------------------------------------------------
 
 const PROFILE_BASE := "user://class_selftest_cfg"
 
