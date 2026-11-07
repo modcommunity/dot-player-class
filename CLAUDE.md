@@ -30,7 +30,7 @@ Paths except `examples/` are in `addons/dot_player_class/`.
 
 ## Running and testing
 
-The family's two steps ([game-dev/CLAUDE.md](../../CLAUDE.md#validating-anything)), then `timeout 120 godot --headless --path . res://examples/class_selftest.tscn`.
+The family's two steps ([family CLAUDE.md](../../CLAUDE.md#validating-anything)), then `timeout 120 godot --headless --path . res://examples/class_selftest.tscn`.
 
 ## Rules that bite
 
