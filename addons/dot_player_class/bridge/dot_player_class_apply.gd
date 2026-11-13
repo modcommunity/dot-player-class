@@ -130,12 +130,23 @@ static func _scale(
 	return 1
 
 
-static func _has_property(target: Object, field: String) -> bool:
-	for entry: Dictionary in target.get_property_list():
-		if String(entry.get("name", "")) == field:
-			return true
+# Property names per script (or per native class when there is no script): get_property_list()
+# builds a fresh array of dictionaries on every call, which cost ~25 ms per respawn wave.
+static var _names_by_type: Dictionary = {}
 
-	return false
+
+static func _has_property(target: Object, field: String) -> bool:
+	var script: Variant = target.get_script()
+	var key: Variant = script if script != null else target.get_class()
+	var names: Dictionary = _names_by_type.get(key, {})
+
+	if names.is_empty():
+		for entry: Dictionary in target.get_property_list():
+			names[String(entry.get("name", ""))] = true
+
+		_names_by_type[key] = names
+
+	return names.has(field)
 
 
 static func _id_of(def: Object) -> String:
